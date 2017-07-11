@@ -94,18 +94,19 @@ namespace GoFish
         }
         static void Main(string[] args)
         {
-            //ADD way of restricting user input to only cards they have available
             Console.OutputEncoding = System.Text.Encoding.Unicode;
             List<Card> deck = CreateDeck();
             List<Card> playerHand = CreateHand(ref deck, 7);
             List<Card> computerHand = CreateHand(ref deck, 7);
             List<Card> retrievedCards = new List<Card>();
             List<Card> repeatedCards = new List<Card>();
+            List<char> rememberedCards = new List<char>();
             bool gameOver = false;
+            bool cpuUsedRememberedCard = false;
             bool deckEmptyMessageDisplayed = false;
             char playerCardRequest = 'b';
             string playerInput = "a";
-            Card computerCardRequest;
+            Card computerCardRequest = new Card(1, 1); //should never be asked for by CPU before its card selection
             bool playerGotCard = false;
             bool computerGotCard = false;
             bool playerInvalidCard = true;
@@ -116,6 +117,7 @@ namespace GoFish
                 //bool resets
                 playerGotCard = false;
                 computerGotCard = false;
+                cpuUsedRememberedCard = false;
 
                 //displays player's info
                 playerHand = playerHand.OrderByDescending(o => o.value).ToList();
@@ -149,6 +151,13 @@ namespace GoFish
                         playerInput = Console.ReadLine().ToUpper();
                     }
                 }
+                //adds the player's request to remembered cards and removes cards from further memory
+                rememberedCards.Add(playerInput[0]);
+                if (rememberedCards.Count>4)
+                {
+                    rememberedCards.Remove(rememberedCards[0]);
+                }
+
 
                 //checks if the requested card is in the computer's hand and removes it if it is
                 for (int i = 0; i < computerHand.Count; i++)
@@ -179,10 +188,27 @@ namespace GoFish
                 {
                     gameOver = true;
                 }
+
+                //AI's turn
                 if (!gameOver)
                 {
-                    //selects random card from computer hand and sees if it's in the player's hand
-                    computerCardRequest = computerHand[Globals.numgen.Next(0, computerHand.Count - 1)];
+                    //checks if the cpu has a card from the player's hand it can remember:
+                    foreach (Card card in computerHand)
+                    {
+                        if (rememberedCards.Contains(card.name[0]))
+                        {
+                            computerCardRequest = card;
+                            cpuUsedRememberedCard = true;
+                            rememberedCards.RemoveAll(item => item == card.name[0]); //removes all instances of that char from CPU memory
+                            break;
+                        }
+                    }
+                    //if the cpu cannot remember, pick a random card:
+                    if (!cpuUsedRememberedCard)
+                    {
+                        computerCardRequest = computerHand[Globals.numgen.Next(0, computerHand.Count - 1)];
+                    }
+
                     Console.WriteLine("Computer asks for a " + computerCardRequest.nameSansSuit);
                     for (int i = 0; i < playerHand.Count; i++)
                     {
@@ -207,7 +233,7 @@ namespace GoFish
                         Console.WriteLine("The computer goes fishing");
                     }
                 }
-                //removes sets from player hand they have them
+                //removes sets from player hand if they have them
                 for (int i = 1; i <= 13; i++)
                 {
                     foreach (Card card in playerHand)
